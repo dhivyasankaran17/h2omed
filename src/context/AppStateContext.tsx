@@ -78,6 +78,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setWaterCount(count);
     setMedReminders(reminders);
     setMedStatuses(withAutoMissed);
+
+    // Re-sync the OS notification schedule with whatever's actually stored. Without this,
+    // a fresh install (or anything that leaves the two out of step) would show correct
+    // "next reminder" text in the UI while zero notifications are actually registered with
+    // the OS — scheduling only ever happened as a side effect of editing settings/reminders.
+    await Promise.all([scheduleWaterReminders(settings), scheduleMedReminders(reminders)]);
   }, [applyAutoMissed]);
 
   useEffect(() => {

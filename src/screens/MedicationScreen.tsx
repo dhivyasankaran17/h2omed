@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { BigGlowButton } from '../components/BigGlowButton';
 import { GlassCard } from '../components/GlassCard';
 import { GradientButton } from '../components/GradientButton';
@@ -22,6 +22,11 @@ export function MedicationScreen() {
   const { medReminders, medStatuses, setMedStatus } = useAppState();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<MedReminder | undefined>(undefined);
+  const { height: windowHeight } = useWindowDimensions();
+
+  // Same screen-height-relative scaling as the water glass, so the pill fills a
+  // consistent share of the screen instead of leaving a large gap on taller phones.
+  const pillWidth = Math.round(Math.min(190, Math.max(130, windowHeight * 0.19)));
 
   const enabled = useMemo(() => medReminders.filter((r) => r.enabled), [medReminders]);
   const takenCount = enabled.filter((r) => medStatuses[r.id] === 'taken').length;
@@ -62,7 +67,7 @@ export function MedicationScreen() {
         <PillVessel
           taken={takenCount}
           total={enabled.length}
-          width={110}
+          width={pillWidth}
           caption={enabled.length > 0 ? `${takenCount} / ${enabled.length} taken today` : 'No reminders yet'}
         />
       </View>
