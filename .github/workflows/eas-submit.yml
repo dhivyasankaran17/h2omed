@@ -14,6 +14,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Set up EAS CLI
         uses: expo/expo-github-action@v8
         with:
