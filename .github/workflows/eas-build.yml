@@ -1,0 +1,25 @@
+name: EAS Build (iOS)
+
+# Runs automatically on every push to main, and can also be triggered manually
+# from the Actions tab. Builds are queued on Expo's cloud macOS machines — this
+# workflow just kicks that off and waits for the result.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS app (production profile)
+        run: eas build --platform ios --profile production --non-interactive

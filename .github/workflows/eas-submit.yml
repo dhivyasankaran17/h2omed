@@ -1,0 +1,24 @@
+name: Submit to App Store Connect
+
+# Manual only — run this from the Actions tab (or `gh workflow run`) once you've
+# checked a build and decided it's ready to go to TestFlight/App Store. Kept
+# separate from the build workflow on purpose, so nothing reaches Apple without
+# a deliberate step.
+on:
+  workflow_dispatch:
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit latest iOS build to App Store Connect
+        run: eas submit --platform ios --latest --non-interactive
