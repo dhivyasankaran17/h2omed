@@ -1,0 +1,290 @@
+<title>H2OMed Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #FAFBF9;
+    --surface: #FFFFFF;
+    --ink: #0B1E1C;
+    --ink-muted: #4B5F5C;
+    --accent: #147A63;
+    --accent-bright: #0E9C93;
+    --border: #DCE6E2;
+    --summary-bg: #EAF6F2;
+    --summary-border: #BFE0D6;
+    --focus: #0E9C93;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #031216;
+      --surface: #0E2A28;
+      --ink: #F4FAF9;
+      --ink-muted: rgba(244, 250, 249, 0.68);
+      --accent: #4AA8AA;
+      --accent-bright: #5FE3E6;
+      --border: rgba(192, 214, 223, 0.16);
+      --summary-bg: rgba(24, 134, 104, 0.16);
+      --summary-border: rgba(74, 168, 170, 0.35);
+      --focus: #5FE3E6;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #031216;
+    --surface: #0E2A28;
+    --ink: #F4FAF9;
+    --ink-muted: rgba(244, 250, 249, 0.68);
+    --accent: #4AA8AA;
+    --accent-bright: #5FE3E6;
+    --border: rgba(192, 214, 223, 0.16);
+    --summary-bg: rgba(24, 134, 104, 0.16);
+    --summary-border: rgba(74, 168, 170, 0.35);
+    --focus: #5FE3E6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Source Sans 3", -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+
+  header.doc-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .mark {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .wordmark {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: clamp(2rem, 5vw, 2.6rem);
+    font-weight: 500;
+    line-height: 1.1;
+    margin: 4px 0 6px;
+    text-wrap: balance;
+    font-optical-sizing: auto;
+  }
+
+  .meta {
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin: 0 0 40px;
+  }
+
+  .summary {
+    background: var(--summary-bg);
+    border: 1px solid var(--summary-border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+  }
+
+  .summary .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+
+  .summary ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .summary li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+
+  .summary li::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-bright);
+    margin-top: 8px;
+  }
+
+  section {
+    margin-bottom: 40px;
+  }
+
+  h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    text-wrap: balance;
+  }
+
+  section:first-of-type h2 { border-top: none; padding-top: 0; }
+
+  p { margin: 0 0 14px; color: var(--ink); }
+  p:last-child { margin-bottom: 0; }
+
+  .muted { color: var(--ink-muted); }
+
+  a {
+    color: var(--accent-bright);
+    text-decoration-color: var(--summary-border);
+    text-underline-offset: 3px;
+  }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--summary-bg);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--ink-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    justify-content: space-between;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .page { animation: rise 0.5s ease-out; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>
+
+<div class="page">
+  <header class="doc-header">
+    <svg class="mark" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="H2OMed">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#03141A"/>
+          <stop offset="1" stop-color="#0B3B33"/>
+        </linearGradient>
+        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5FE3E6"/>
+          <stop offset="1" stop-color="#188668"/>
+        </linearGradient>
+        <clipPath id="dropClip">
+          <path d="M512,144 C512,144 280,442 280,610 C280,745 383,838 512,838 C641,838 744,745 744,610 C744,442 512,144 512,144 Z"/>
+        </clipPath>
+      </defs>
+      <rect width="1024" height="1024" fill="url(#bg)"/>
+      <g clip-path="url(#dropClip)">
+        <rect x="180" y="130" width="664" height="720" fill="url(#water)"/>
+        <rect x="180" y="646" width="664" height="220" fill="#F4FAF9"/>
+        <rect x="180" y="638" width="664" height="10" fill="#5FE3E6"/>
+      </g>
+      <path d="M512,144 C512,144 280,442 280,610 C280,745 383,838 512,838 C641,838 744,745 744,610 C744,442 512,144 512,144 Z" fill="none" stroke="#5FE3E6" stroke-width="16"/>
+    </svg>
+    <div class="wordmark">H2OMed</div>
+  </header>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">Effective August 28, 2026</p>
+
+  <div class="summary">
+    <p class="eyebrow">In short</p>
+    <ul>
+      <li>H2OMed doesn't collect, store, or transmit any personal data — there's no account, no server, and nothing ever leaves your device.</li>
+      <li>Your hydration goal, reminder times, and medication list are saved only in your device's local storage.</li>
+      <li>Reminders are scheduled directly on your device's operating system, not through a push notification service.</li>
+      <li>No analytics, no advertising, no third-party trackers.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2>Information we collect</h2>
+    <p>None. H2OMed does not ask you to create an account, does not request your name, email address, or any other identifying information, and has no backend server to send information to even if it wanted to.</p>
+    <p>The only information the app handles is what you enter yourself — a hydration goal, a reminder window, medication names and times, and your day-to-day logging (glasses drunk, doses marked taken, snoozed, or missed). This information is saved using your device's local, on-device storage and is never transmitted anywhere.</p>
+  </section>
+
+  <section>
+    <h2>Notifications</h2>
+    <p>H2OMed schedules reminders using your device's built-in local notification system. These are <em>local</em> notifications — generated and delivered entirely on your device — not push notifications routed through Apple, Google, or any third-party notification service. No reminder content or notification response is sent off your device.</p>
+  </section>
+
+  <section>
+    <h2>Third parties</h2>
+    <p>H2OMed does not integrate any third-party analytics, advertising, or crash-reporting software development kits. We don't sell, rent, or share your information with anyone, because we never collect it in the first place.</p>
+  </section>
+
+  <section>
+    <h2>Data retention and deletion</h2>
+    <p>Everything H2OMed stores lives in your device's app storage. Uninstalling the app removes it completely. There is no copy anywhere else to delete, because none was ever made.</p>
+  </section>
+
+  <section>
+    <h2>Children's privacy</h2>
+    <p>H2OMed does not knowingly collect information from anyone, including children under 13, because it does not collect information from anyone at all.</p>
+  </section>
+
+  <section>
+    <h2>Changes to this policy</h2>
+    <p>If H2OMed's data practices ever change — for example, if a future version adds an optional account or syncing feature — this page will be updated first, with a new effective date above, before that change ships.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions about this policy can be sent to <a href="mailto:dhivya.sankaran17@gmail.com">dhivya.sankaran17@gmail.com</a>.</p>
+  </section>
+
+  <footer>
+    <span>H2OMed</span>
+    <span class="muted">Last updated August 28, 2026</span>
+  </footer>
+</div>

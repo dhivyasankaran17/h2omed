@@ -1,0 +1,194 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { hasTimePassed, minutesSince } from '../lib/date';
+import {
+  initNotifications,
+  registerNotificationResponseHandler,
+  scheduleMedReminders,
+  scheduleWaterReminders,
+} from '../lib/notifications';
+import { MedStore, WaterStore } from '../lib/storage';
+import type { FoodTiming, MedReminder, MedStatus, WaterSettings } from '../lib/types';
+
+/** A pending reminder auto-flips to "missed" this many minutes after its time if untouched. */
+const AUTO_MISSED_GRACE_MINUTES = 60;
+
+interface AppStateValue {
+  loading: boolean;
+  permissionGranted: boolean;
+
+  water: { settings: WaterSettings; count: number };
+  drinkGlass: () => Promise<void>;
+  undoGlass: () => Promise<void>;
+  updateWaterSettings: (patch: Partial<WaterSettings>) => Promise<void>;
+
+  medReminders: MedReminder[];
+  medStatuses: Record<string, MedStatus>;
+  addMedReminder: (input: { time: string; label: string; foodTiming: FoodTiming }) => Promise<void>;
+  updateMedReminder: (id: string, patch: Partial<Omit<MedReminder, 'id'>>) => Promise<void>;
+  deleteMedReminder: (id: string) => Promise<void>;
+  setMedStatus: (id: string, status: MedStatus) => Promise<void>;
+
+  refreshAll: () => Promise<void>;
+}
+
+const AppStateContext = createContext<AppStateValue | null>(null);
+
+export function AppStateProvider({ children }: { children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [waterSettings, setWaterSettingsState] = useState<WaterSettings>({
+    goalGlasses: 8,
+    windowStart: '08:00',
+    windowEnd: '21:00',
+    glassMl: 250,
+  });
+  const [waterCount, setWaterCount] = useState(0);
+  const [medReminders, setMedReminders] = useState<MedReminder[]>([]);
+  const [medStatuses, setMedStatuses] = useState<Record<string, MedStatus>>({});
+
+  const remindersRef = useRef<MedReminder[]>([]);
+  remindersRef.current = medReminders;
+
+  /** Auto-marks any still-pending reminder as "missed" once its grace period has elapsed. */
+  const applyAutoMissed = useCallback(async (reminders: MedReminder[], statuses: Record<string, MedStatus>) => {
+    const updates: Array<Promise<void>> = [];
+    const next = { ...statuses };
+    for (const reminder of reminders) {
+      if (!reminder.enabled) continue;
+      const status = next[reminder.id] ?? 'pending';
+      if (status === 'pending' && hasTimePassed(reminder.time) && minutesSince(reminder.time) > AUTO_MISSED_GRACE_MINUTES) {
+        next[reminder.id] = 'missed';
+        updates.push(MedStore.setStatus(reminder.id, 'missed'));
+      }
+    }
+    if (updates.length) await Promise.all(updates);
+    return next;
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    const [settings, count, reminders, statuses] = await Promise.all([
+      WaterStore.getSettings(),
+      WaterStore.getTodayCount(),
+      MedStore.getReminders(),
+      MedStore.getTodayStatuses(),
+    ]);
+    const withAutoMissed = await applyAutoMissed(reminders, statuses);
+    setWaterSettingsState(settings);
+    setWaterCount(count);
+    setMedReminders(reminders);
+    setMedStatuses(withAutoMissed);
+  }, [applyAutoMissed]);
+
+  useEffect(() => {
+    (async () => {
+      const granted = await initNotifications();
+      setPermissionGranted(granted);
+      await refreshAll();
+      setLoading(false);
+    })();
+
+    const sub = registerNotificationResponseHandler(() => {
+      refreshAll();
+    });
+
+    const appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') refreshAll();
+    });
+
+    return () => {
+      sub.remove();
+      appStateSub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const drinkGlass = useCallback(async () => {
+    const next = await WaterStore.increment();
+    setWaterCount(next);
+  }, []);
+
+  const undoGlass = useCallback(async () => {
+    const next = await WaterStore.decrement();
+    setWaterCount(next);
+  }, []);
+
+  const updateWaterSettings = useCallback(async (patch: Partial<WaterSettings>) => {
+    const next = await WaterStore.setSettings(patch);
+    setWaterSettingsState(next);
+    await scheduleWaterReminders(next);
+  }, []);
+
+  const addMedReminder = useCallback(async (input: { time: string; label: string; foodTiming: FoodTiming }) => {
+    await MedStore.addReminder(input);
+    const reminders = await MedStore.getReminders();
+    setMedReminders(reminders);
+    await scheduleMedReminders(reminders);
+  }, []);
+
+  const updateMedReminder = useCallback(async (id: string, patch: Partial<Omit<MedReminder, 'id'>>) => {
+    await MedStore.updateReminder(id, patch);
+    const reminders = await MedStore.getReminders();
+    setMedReminders(reminders);
+    await scheduleMedReminders(reminders);
+  }, []);
+
+  const deleteMedReminder = useCallback(async (id: string) => {
+    await MedStore.deleteReminder(id);
+    const reminders = await MedStore.getReminders();
+    setMedReminders(reminders);
+    setMedStatuses((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    await scheduleMedReminders(reminders);
+  }, []);
+
+  const setMedStatus = useCallback(async (id: string, status: MedStatus) => {
+    await MedStore.setStatus(id, status);
+    setMedStatuses((prev) => ({ ...prev, [id]: status }));
+  }, []);
+
+  const value = useMemo<AppStateValue>(
+    () => ({
+      loading,
+      permissionGranted,
+      water: { settings: waterSettings, count: waterCount },
+      drinkGlass,
+      undoGlass,
+      updateWaterSettings,
+      medReminders,
+      medStatuses,
+      addMedReminder,
+      updateMedReminder,
+      deleteMedReminder,
+      setMedStatus,
+      refreshAll,
+    }),
+    [
+      loading,
+      permissionGranted,
+      waterSettings,
+      waterCount,
+      drinkGlass,
+      undoGlass,
+      updateWaterSettings,
+      medReminders,
+      medStatuses,
+      addMedReminder,
+      updateMedReminder,
+      deleteMedReminder,
+      setMedStatus,
+      refreshAll,
+    ]
+  );
+
+  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+}
+
+export function useAppState(): AppStateValue {
+  const ctx = useContext(AppStateContext);
+  if (!ctx) throw new Error('useAppState must be used within AppStateProvider');
+  return ctx;
+}

@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "H2OMed",
+    "slug": "h2omed",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dhivyasankaran17.h2omed",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.dhivyasankaran17.h2omed",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B3B33",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#188668"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f43f13b2-740b-423c-ac1b-0efcbaa21cd1"
+      }
+    },
+    "owner": "dhivyasankaran17"
+  }
+}
