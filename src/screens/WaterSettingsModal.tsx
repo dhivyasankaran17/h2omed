@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GlassCard } from '../components/GlassCard';
 import { GradientButton } from '../components/GradientButton';
 import { TimePickerField } from '../components/TimePickerField';
 import { useAppState } from '../context/AppStateContext';
 import { colors, gradients } from '../theme/colors';
+
+const PRIVACY_POLICY_URL = 'https://dhivyasankaran17.github.io/h2omed/';
 
 interface Props {
   visible: boolean;
@@ -68,6 +70,10 @@ export function WaterSettingsModal({ visible, onClose }: Props) {
             <GradientButton label="Cancel" onPress={onClose} colorsSet={['#123B34', colors.surfaceAlt]} style={styles.button} />
             <GradientButton label="Save" onPress={handleSave} colorsSet={gradients.tealButton} style={styles.button} />
           </View>
+
+          <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} style={styles.privacyLink} hitSlop={8}>
+            <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          </Pressable>
         </GlassCard>
       </View>
     </Modal>
@@ -99,4 +105,6 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginTop: 8 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
   button: { flex: 1 },
+  privacyLink: { alignItems: 'center', paddingVertical: 16, marginTop: 4 },
+  privacyLinkText: { color: colors.textSecondary, fontSize: 13, textDecorationLine: 'underline' },
 });
