@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import React, { useEffect, useState } from 'react';
+import { Linking, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GlassCard } from '../components/GlassCard';
 import { GradientButton } from '../components/GradientButton';
 import { TimePickerField } from '../components/TimePickerField';
@@ -19,6 +20,16 @@ export function WaterSettingsModal({ visible, onClose }: Props) {
   const [windowStart, setWindowStart] = useState(water.settings.windowStart);
   const [windowEnd, setWindowEnd] = useState(water.settings.windowEnd);
   const [error, setError] = useState<string | null>(null);
+  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
+
+  // Lets you confirm what's actually registered with the OS, rather than trusting the
+  // in-app math alone — useful for tracking down "I'm not getting reminders" reports.
+  useEffect(() => {
+    if (!visible || Platform.OS === 'web') return;
+    Notifications.getAllScheduledNotificationsAsync()
+      .then((all) => setScheduledCount(all.filter((n) => n.identifier.startsWith('water-')).length))
+      .catch(() => setScheduledCount(null));
+  }, [visible]);
 
   const handleSave = async () => {
     const goal = parseInt(goalText, 10);
@@ -64,6 +75,14 @@ export function WaterSettingsModal({ visible, onClose }: Props) {
             </View>
           </View>
 
+          {scheduledCount !== null && (
+            <Text style={styles.scheduledHint}>
+              {scheduledCount > 0
+                ? `${scheduledCount} hourly reminder${scheduledCount === 1 ? '' : 's'} currently scheduled on this device.`
+                : 'No reminders are currently scheduled on this device — try reopening the app.'}
+            </Text>
+          )}
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <View style={styles.buttonRow}>
@@ -102,6 +121,7 @@ const styles = StyleSheet.create({
   goalUnit: { color: colors.textSecondary, fontSize: 13, flexShrink: 1 },
   timeRow: { flexDirection: 'row', gap: 12 },
   timeField: { flex: 1 },
+  scheduledHint: { color: colors.textSecondary, fontSize: 12, marginTop: 10 },
   error: { color: colors.danger, fontSize: 13, marginTop: 8 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
   button: { flex: 1 },

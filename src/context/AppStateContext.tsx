@@ -83,7 +83,22 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     // a fresh install (or anything that leaves the two out of step) would show correct
     // "next reminder" text in the UI while zero notifications are actually registered with
     // the OS — scheduling only ever happened as a side effect of editing settings/reminders.
-    await Promise.all([scheduleWaterReminders(settings), scheduleMedReminders(reminders)]);
+    //
+    // Run these one at a time, not Promise.all: water schedules up to ~14 notifications in a
+    // loop, and interleaving that with medication's own schedule/cancel calls to the same
+    // native notification center risks a race where some requests silently don't register.
+    // Each is also isolated in its own try/catch so a failure in one doesn't take out the
+    // other or leave the caller with an unhandled rejection.
+    try {
+      await scheduleWaterReminders(settings);
+    } catch (e) {
+      console.warn('Failed to schedule water reminders', e);
+    }
+    try {
+      await scheduleMedReminders(reminders);
+    } catch (e) {
+      console.warn('Failed to schedule medication reminders', e);
+    }
   }, [applyAutoMissed]);
 
   useEffect(() => {
