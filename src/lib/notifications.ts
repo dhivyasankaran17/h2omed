@@ -155,26 +155,67 @@ async function snoozeOneOff(
   });
 }
 
+/** Re-fires a water reminder in SNOOZE_MINUTES — used both by the notification's own
+ * Snooze button and by the in-app dialog shown when someone just taps the banner. */
+export async function snoozeWaterNow(glassMl: number): Promise<void> {
+  if (IS_WEB) return;
+  await snoozeOneOff(
+    {
+      title: 'Time to hydrate 💧',
+      body: `Have a glass of water (${glassMl} mL).`,
+      categoryIdentifier: CATEGORY.water,
+      data: { type: 'water' },
+    },
+    `water-snooze-${Date.now()}`
+  );
+}
+
+/** Re-fires a specific medication reminder in SNOOZE_MINUTES. */
+export async function snoozeMedNow(reminder: MedReminder): Promise<void> {
+  if (IS_WEB) return;
+  const foodNote =
+    reminder.foodTiming === 'before' ? ' (before food)' : reminder.foodTiming === 'after' ? ' (after food)' : '';
+  await snoozeOneOff(
+    {
+      title: 'Medication reminder 💊',
+      body: `${reminder.label}${foodNote}`,
+      categoryIdentifier: CATEGORY.med,
+      data: { type: 'med', reminderId: reminder.id },
+    },
+    `med-snooze-${reminder.id}-${Date.now()}`
+  );
+}
+
 export type NotificationRefreshCallback = () => void;
 
 /**
- * Wires notification action buttons to app state:
- *  - water: "Drank it" logs +1 glass, "Snooze" re-fires in 10 min
- *  - med: "Taken"/"Missed" set today's status for that reminder, "Snooze" marks it
- *    snoozed and re-fires in 10 min
+ * Wires notification interactions to app state:
+ *  - water: the notification's own "Drank it" button logs +1 glass, "Snooze" re-fires in
+ *    10 min; a plain tap on the banner (no action button — the common case, since the
+ *    action buttons need a long-press to reveal) instead calls `onWaterTap` so the app can
+ *    show an in-app "Drank it / Snooze / Cancel" prompt.
+ *  - med: same idea — "Taken"/"Missed"/"Snooze" action buttons update status directly; a
+ *    plain tap calls `onMedTap(reminderId)` so the app can prompt for that reminder.
  * Call `onChange` after handling so screens can refresh from storage.
  */
-export function registerNotificationResponseHandler(onChange: NotificationRefreshCallback) {
+export function registerNotificationResponseHandler(
+  onChange: NotificationRefreshCallback,
+  onWaterTap: () => void,
+  onMedTap: (reminderId: string) => void
+) {
   if (IS_WEB) return { remove: () => {} };
   return Notifications.addNotificationResponseReceivedListener(async (response) => {
     const { actionIdentifier, notification } = response;
     const data = notification.request.content.data as { type?: string; reminderId?: string };
+    const isDefaultTap = actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
 
     if (data?.type === 'water') {
       if (actionIdentifier === ACTION.drankIt) {
         await WaterStore.increment();
       } else if (actionIdentifier === ACTION.snooze) {
         await snoozeOneOff(notification.request.content, `water-snooze-${Date.now()}`);
+      } else if (isDefaultTap) {
+        onWaterTap();
       }
       onChange();
       return;
@@ -189,6 +230,8 @@ export function registerNotificationResponseHandler(onChange: NotificationRefres
       } else if (actionIdentifier === ACTION.snooze) {
         await MedStore.setStatus(reminderId, 'snoozed');
         await snoozeOneOff(notification.request.content, `med-snooze-${reminderId}-${Date.now()}`);
+      } else if (isDefaultTap) {
+        onMedTap(reminderId);
       }
       onChange();
     }

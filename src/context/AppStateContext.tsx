@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { Alert, AppState, AppStateStatus } from 'react-native';
 import { hasTimePassed, minutesSince } from '../lib/date';
 import {
   initNotifications,
   registerNotificationResponseHandler,
   scheduleMedReminders,
   scheduleWaterReminders,
+  snoozeMedNow,
+  snoozeWaterNow,
 } from '../lib/notifications';
 import { MedStore, WaterStore } from '../lib/storage';
 import type { FoodTiming, MedReminder, MedStatus, WaterSettings } from '../lib/types';
@@ -49,6 +51,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const remindersRef = useRef<MedReminder[]>([]);
   remindersRef.current = medReminders;
+  const waterSettingsRef = useRef<WaterSettings>(waterSettings);
+  waterSettingsRef.current = waterSettings;
 
   /** Auto-marks any still-pending reminder as "missed" once its grace period has elapsed. */
   const applyAutoMissed = useCallback(async (reminders: MedReminder[], statuses: Record<string, MedStatus>) => {
@@ -101,6 +105,36 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAutoMissed]);
 
+  // Plain functions (not useCallback) so they can freely reference drinkGlass/setMedStatus
+  // even though those are declared further down — the bodies only run later, when a
+  // notification is actually tapped, by which point the whole component has rendered once
+  // and every declaration below exists. They read live data via the refs above rather than
+  // depending on the closure staying fresh, since the mount effect registers them exactly once.
+  const onWaterTap = () => {
+    Alert.alert('Time to hydrate 💧', 'Did you drink a glass of water?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Snooze 10m', onPress: () => snoozeWaterNow(waterSettingsRef.current.glassMl) },
+      { text: 'Drank it', onPress: () => drinkGlass() },
+    ]);
+  };
+
+  const onMedTap = (reminderId: string) => {
+    const reminder = remindersRef.current.find((r) => r.id === reminderId);
+    if (!reminder) return;
+    Alert.alert('Medication reminder 💊', reminder.label, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Missed', style: 'destructive', onPress: () => setMedStatus(reminderId, 'missed') },
+      {
+        text: 'Snooze 10m',
+        onPress: () => {
+          setMedStatus(reminderId, 'snoozed');
+          snoozeMedNow(reminder);
+        },
+      },
+      { text: 'Taken', onPress: () => setMedStatus(reminderId, 'taken') },
+    ]);
+  };
+
   useEffect(() => {
     (async () => {
       const granted = await initNotifications();
@@ -109,9 +143,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     })();
 
-    const sub = registerNotificationResponseHandler(() => {
-      refreshAll();
-    });
+    const sub = registerNotificationResponseHandler(
+      () => refreshAll(),
+      () => onWaterTap(),
+      (reminderId) => onMedTap(reminderId)
+    );
 
     const appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state === 'active') refreshAll();
