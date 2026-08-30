@@ -187,53 +187,85 @@ export async function snoozeMedNow(reminder: MedReminder): Promise<void> {
 }
 
 export type NotificationRefreshCallback = () => void;
+type WaterTapHandler = () => void;
+type MedTapHandler = (reminderId: string) => void;
 
 /**
- * Wires notification interactions to app state:
+ * The actual response-handling logic, shared by the live listener below and by the
+ * cold-start check in `processPendingNotificationResponse`:
  *  - water: the notification's own "Drank it" button logs +1 glass, "Snooze" re-fires in
  *    10 min; a plain tap on the banner (no action button — the common case, since the
  *    action buttons need a long-press to reveal) instead calls `onWaterTap` so the app can
  *    show an in-app "Drank it / Snooze / Cancel" prompt.
  *  - med: same idea — "Taken"/"Missed"/"Snooze" action buttons update status directly; a
  *    plain tap calls `onMedTap(reminderId)` so the app can prompt for that reminder.
- * Call `onChange` after handling so screens can refresh from storage.
  */
+async function handleNotificationResponse(
+  response: Notifications.NotificationResponse,
+  onWaterTap: WaterTapHandler,
+  onMedTap: MedTapHandler
+): Promise<void> {
+  const { actionIdentifier, notification } = response;
+  const data = notification.request.content.data as { type?: string; reminderId?: string };
+  const isDefaultTap = actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
+
+  if (data?.type === 'water') {
+    if (actionIdentifier === ACTION.drankIt) {
+      await WaterStore.increment();
+    } else if (actionIdentifier === ACTION.snooze) {
+      await snoozeOneOff(notification.request.content, `water-snooze-${Date.now()}`);
+    } else if (isDefaultTap) {
+      onWaterTap();
+    }
+    return;
+  }
+
+  if (data?.type === 'med' && data.reminderId) {
+    const reminderId = data.reminderId;
+    if (actionIdentifier === ACTION.taken) {
+      await MedStore.setStatus(reminderId, 'taken');
+    } else if (actionIdentifier === ACTION.missed) {
+      await MedStore.setStatus(reminderId, 'missed');
+    } else if (actionIdentifier === ACTION.snooze) {
+      await MedStore.setStatus(reminderId, 'snoozed');
+      await snoozeOneOff(notification.request.content, `med-snooze-${reminderId}-${Date.now()}`);
+    } else if (isDefaultTap) {
+      onMedTap(reminderId);
+    }
+  }
+}
+
+/** Wires live notification interactions (arriving while the app is already running) to app
+ * state. Call `onChange` after handling so screens can refresh from storage. */
 export function registerNotificationResponseHandler(
   onChange: NotificationRefreshCallback,
-  onWaterTap: () => void,
-  onMedTap: (reminderId: string) => void
+  onWaterTap: WaterTapHandler,
+  onMedTap: MedTapHandler
 ) {
   if (IS_WEB) return { remove: () => {} };
   return Notifications.addNotificationResponseReceivedListener(async (response) => {
-    const { actionIdentifier, notification } = response;
-    const data = notification.request.content.data as { type?: string; reminderId?: string };
-    const isDefaultTap = actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
-
-    if (data?.type === 'water') {
-      if (actionIdentifier === ACTION.drankIt) {
-        await WaterStore.increment();
-      } else if (actionIdentifier === ACTION.snooze) {
-        await snoozeOneOff(notification.request.content, `water-snooze-${Date.now()}`);
-      } else if (isDefaultTap) {
-        onWaterTap();
-      }
-      onChange();
-      return;
-    }
-
-    if (data?.type === 'med' && data.reminderId) {
-      const reminderId = data.reminderId;
-      if (actionIdentifier === ACTION.taken) {
-        await MedStore.setStatus(reminderId, 'taken');
-      } else if (actionIdentifier === ACTION.missed) {
-        await MedStore.setStatus(reminderId, 'missed');
-      } else if (actionIdentifier === ACTION.snooze) {
-        await MedStore.setStatus(reminderId, 'snoozed');
-        await snoozeOneOff(notification.request.content, `med-snooze-${reminderId}-${Date.now()}`);
-      } else if (isDefaultTap) {
-        onMedTap(reminderId);
-      }
-      onChange();
-    }
+    await handleNotificationResponse(response, onWaterTap, onMedTap);
+    onChange();
   });
+}
+
+/**
+ * Catches a notification response that was already acted on before the live listener above
+ * was subscribed — e.g. tapping "Drank it" on an Apple Watch mirrored notification while the
+ * iPhone app was fully closed, or any action taken during a cold start. Without this, that
+ * action is delivered to iOS/watchOS fine but silently never reaches our JS code, since the
+ * app wasn't running yet to receive it. Call once at startup, after registering the live
+ * listener, so nothing acted on while the app was closed gets lost.
+ */
+export async function processPendingNotificationResponse(
+  onChange: NotificationRefreshCallback,
+  onWaterTap: WaterTapHandler,
+  onMedTap: MedTapHandler
+): Promise<void> {
+  if (IS_WEB) return;
+  const response = await Notifications.getLastNotificationResponseAsync();
+  if (!response) return;
+  await handleNotificationResponse(response, onWaterTap, onMedTap);
+  await Notifications.clearLastNotificationResponseAsync();
+  onChange();
 }

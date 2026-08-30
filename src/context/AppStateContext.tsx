@@ -3,6 +3,7 @@ import { Alert, AppState, AppStateStatus } from 'react-native';
 import { hasTimePassed, minutesSince } from '../lib/date';
 import {
   initNotifications,
+  processPendingNotificationResponse,
   registerNotificationResponseHandler,
   scheduleMedReminders,
   scheduleWaterReminders,
@@ -136,25 +137,38 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let liveSub: { remove: () => void } | null = null;
+
     (async () => {
       const granted = await initNotifications();
       setPermissionGranted(granted);
+
+      // Catch anything already acted on before we get a chance to subscribe the live
+      // listener below — e.g. tapping "Drank it" on an Apple Watch mirrored notification
+      // while the iPhone app was fully closed. Must run before registering the listener,
+      // per Expo's own recommended cold-start pattern.
+      await processPendingNotificationResponse(
+        () => refreshAll(),
+        () => onWaterTap(),
+        (reminderId) => onMedTap(reminderId)
+      );
+
+      liveSub = registerNotificationResponseHandler(
+        () => refreshAll(),
+        () => onWaterTap(),
+        (reminderId) => onMedTap(reminderId)
+      );
+
       await refreshAll();
       setLoading(false);
     })();
-
-    const sub = registerNotificationResponseHandler(
-      () => refreshAll(),
-      () => onWaterTap(),
-      (reminderId) => onMedTap(reminderId)
-    );
 
     const appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state === 'active') refreshAll();
     });
 
     return () => {
-      sub.remove();
+      liveSub?.remove();
       appStateSub.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
