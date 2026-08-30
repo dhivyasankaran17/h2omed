@@ -30,4 +30,4 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Submit latest iOS build to App Store Connect
-        run: eas submit --platform ios --latest --non-interactive
+        run: eas submit --platform ios --latest --non-interactive --verbose --verbose-fastlane
